@@ -1,0 +1,21 @@
+[project]
+name = "mapyl"
+version = "0.1.0"
+description = "Utility library for astrophysics and data science"
+readme = "README.md"
+authors = [
+    { name = "Milan Staffehl", email = "milan-staffehl@gmx.de" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.2.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+]
