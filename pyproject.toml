@@ -1,5 +1,5 @@
 [project]
-name = "mapyl"
+name = "maypyl"
 version = "0.1.0"
 description = "Utility library for astrophysics and data science"
 readme = "README.md"
