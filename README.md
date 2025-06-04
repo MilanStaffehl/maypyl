@@ -32,3 +32,27 @@
 
 
 <hr />
+
+## About
+
+`maypyl` is a library of random utilities for data science, specifically made for astrophysics. It includes general purpose tools for data visualisation as well as tools for array manipulation with `numpy` and support for various common statistical and mathematical operations.
+
+## Installation
+
+To install `maypyl`, clone the repository to your machine, and in the root of the project run
+
+```shell
+pip install .
+```
+
+## Documentation
+
+A documentation is in the works. Please be patient.
+
+## License
+
+`maypyl` is distributed under the [MIT license](.\LICENSE).
+
+## Author
+
+- Milan Staffehl
