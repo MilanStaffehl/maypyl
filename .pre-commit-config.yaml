@@ -10,8 +10,11 @@ repos:
     rev: v1.10.0
     hooks:
     -   id: python-check-blanket-noqa
+        stages: [pre-commit]
     -   id: python-check-blanket-type-ignore
+        stages: [pre-commit]
     -   id: python-use-type-annotations
+        stages: [pre-commit]
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
     hooks:
