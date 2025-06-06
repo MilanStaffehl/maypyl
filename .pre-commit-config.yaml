@@ -14,6 +14,10 @@ repos:
         stages: [pre-commit, pre-merge-commit]
     -   id: python-use-type-annotations
         stages: [pre-commit, pre-merge-commit]
+-   repo: https://github.com/PyCQA/isort
+    rev: 6.0.1
+    hooks:
+    -   id: isort
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.13
     hooks:

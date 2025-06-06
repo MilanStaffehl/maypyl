@@ -40,3 +40,12 @@ version_scheme = "pep440"
 version_provider = "uv"
 version_files = ["pyproject.toml:version", "src/maypyl/__init__.py:__version__"]
 major_version_zero = true
+
+[tool.isort]
+src_paths = ["src/maypyl", "tests"]
+known_first_party = ["maypyl"]
+line_length = 79
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
