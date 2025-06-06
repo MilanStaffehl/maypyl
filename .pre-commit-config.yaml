@@ -26,6 +26,17 @@ repos:
         stages: [pre-commit, pre-merge-commit]
     -   id: ruff-format
         stages: [pre-commit, pre-merge-commit]
+-   repo: local
+    hooks:
+      - id: mypy
+        name: Type-check with mypy
+        language: python
+        types: [ python ]
+        pass_filenames: false
+        require_serial: false
+        entry: "uv run mypy ."
+        args: ["--config-file=pyproject.toml"]
+        stages: [pre-commit, pre-merge-commit]
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
     hooks:

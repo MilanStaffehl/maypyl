@@ -34,6 +34,10 @@ max-line-length = 88
 [tool.ruff.lint.mccabe]
 max-complexity = 15
 
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 version_scheme = "pep440"
