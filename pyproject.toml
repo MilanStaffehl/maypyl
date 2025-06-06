@@ -33,3 +33,10 @@ max-line-length = 88
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_scheme = "pep440"
+version_provider = "pep621"
+version_files = ["pyproject.toml:version", "src/maypyl/__init__.py:__version__"]
+major_version_zero = true
