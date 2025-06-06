@@ -19,3 +19,17 @@ build-backend = "hatchling.build"
 dev = [
     "pytest>=8.4.0",
 ]
+
+
+# tools
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "C901", "RUF100", "RUF101", "RUF102", "RUF200"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
