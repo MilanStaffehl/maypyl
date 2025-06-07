@@ -16,15 +16,15 @@
 <hr />
 
 <div align="center">
-  Python utilities for astrophysics, data science, and data visualisation.
-</div>
 
+  Python utilities for astrophysics, data science, and data visualisation.
+
+</div>
 <div align="center">
-    
+
 [![Unit tests](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml)
 
 </div>
-
 <div align="center">
   <a href="#">Installation</a>
   ·
