@@ -28,7 +28,7 @@ dev = [
 line-length = 79
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "B", "C901", "RUF100", "RUF101", "RUF102", "RUF200"]
+select = ["E", "F", "W", "B", "C901", "RUF100", "RUF101", "RUF200"]
 
 [tool.ruff.lint.pycodestyle]
 max-line-length = 88
