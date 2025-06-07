@@ -3,22 +3,56 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, overload
 
 import numpy as np
+import numpy.typing as npt
 
-from ._types import NDArray
+from ._types import ArrayOrPureScalar, ArrayOrScalar, NDArray
 
-if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
+
+@overload
+def nanlog10[A: NDArray[tuple[int, ...], Any]](
+    x: A,
+    sentinel: float | int | None = ...,
+    *,
+    relative: bool = ...,
+) -> A: ...
+
+
+@overload
+def nanlog10[A: np.generic[npt.NBitBase]](
+    x: A,
+    sentinel: float | int | None = ...,
+    *,
+    relative: bool = ...,
+) -> A: ...
+
+
+@overload
+def nanlog10(
+    x: int,
+    sentinel: float | int | None = ...,
+    *,
+    relative: bool = ...,
+) -> np.integer: ...
+
+
+@overload
+def nanlog10(
+    x: float,
+    sentinel: float | int | None = ...,
+    *,
+    relative: bool = ...,
+) -> np.floating: ...
 
 
 def nanlog10(
-    x: ArrayLike,
+    x: ArrayOrScalar,
     sentinel: float | int | None = None,
     *,
     relative: bool = False,
-) -> NDArray[tuple[int, ...], np.generic]:
+) -> ArrayOrPureScalar:
     """
     Decadic logarithm with replacement for invalid results.
 
@@ -53,13 +87,14 @@ def nanlog10(
     :return: The logarithm to base 10 of ``x``, optionally with ``-inf``
         entries replaced by the specified sentinel value.
     """
-    if not isinstance(x, np.ndarray):
-        x = np.asarray(x)
+    y = np.asarray(x)
     with np.errstate(divide="ignore", invalid="ignore"):
-        result = np.log10(x)
+        result: ArrayOrPureScalar = np.log10(y)
     # replace NaNs with sentinel value
     if sentinel is not None:
         if relative:
-            sentinel = sentinel * np.log10(np.nanmin(x[x > 0]))
-        result[x <= 0] = sentinel
+            sentinel = sentinel * np.log10(np.nanmin(y[y > 0]))
+        # must ignore here, since mypy does not know that indexing scalars
+        # with conditions is valid:
+        result[y <= 0] = sentinel  # type: ignore[index]
     return result

@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 
 type NDArray[S: tuple[int, ...], T: np.generic] = np.ndarray[S, np.dtype[T]]
+type ArrayOrScalar = NDArray[tuple[int, ...], Any] | np.generic | float | int
+type ArrayOrPureScalar = NDArray[tuple[int, ...], Any] | np.generic

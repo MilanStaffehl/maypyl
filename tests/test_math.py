@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 import maypyl
+
+if TYPE_CHECKING:
+    from pytest_subtests import SubTests
 
 
 def test_nanlog10_basic() -> None:
@@ -50,4 +54,18 @@ def test_nanlog10_relative_sentinel() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         result = maypyl.nanlog10(x, 0.1, relative=True)
-    np.testing.assert_almost_equal(result, np.array([0.1, 1, 0.1]))  # type: ignore[arg-type]
+    np.testing.assert_almost_equal(result, np.array([0.1, 1, 0.1]))
+
+
+def test_nanlog10_scalars(subtests: SubTests) -> None:
+    """Test that scalars can be passed to the function."""
+    mapping = {
+        10: 1,
+        0: -np.inf,
+        -1: np.nan,
+    }
+    for scalar, expected in mapping.items():
+        with subtests.test(scalar=scalar):
+            result = maypyl.nanlog10(scalar)
+            assert isinstance(result, np.floating)
+            np.testing.assert_array_equal(result, expected)
