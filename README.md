@@ -9,21 +9,18 @@
   <p style="font-size:14pt">
     <b>M</b>y <b>A</b>stroph<b>y</b>sics <b>Py</b>thon <b>L</b>ibrary
   </p>
-  <br />
-  <br />
+</div>
+
+<div align="center"> 
+    
+  [![Unit tests](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml)
+
 </div>
 
 <hr />
 
 <div align="center">
-
   Python utilities for astrophysics, data science, and data visualisation.
-
-</div>
-<div align="center">
-
-[![Unit tests](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml)
-
 </div>
 <div align="center">
   <a href="#">Installation</a>
