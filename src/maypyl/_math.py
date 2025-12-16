@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import Any, overload
 
 import numpy as np
-import numpy.typing as npt
 
 from ._types import ArrayOrPureScalar, ArrayOrScalar, NDArray
 
@@ -21,7 +20,7 @@ def nanlog10[A: NDArray[tuple[int, ...], Any]](
 
 
 @overload
-def nanlog10[A: np.generic[npt.NBitBase]](
+def nanlog10[A: np.generic[Any]](
     x: A,
     sentinel: float | int | None = ...,
     *,
