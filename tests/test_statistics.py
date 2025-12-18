@@ -406,3 +406,87 @@ def test_axis_aligned_projection_multipixel_mean_with_weights(
         np.array([0.1, 0.36666667, 0.63333333, 0.9]),
     )
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+def test_axis_aligned_projection_limited_depth_sum_no_weights(
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode sum, no weights."""
+    cell_edges, values = base_cell_setup
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="sum",
+    )
+    expected_img = np.array([[0.875]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+def test_axis_aligned_projection_limited_depth_sum_with_weight(
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode sum, basic set-up."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="sum",
+    )
+    expected_img = np.array([[0.65]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+def test_axis_aligned_projection_limited_depth_mean_no_weight(
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode mean, basic set-up."""
+    cell_edges, values = base_cell_setup
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="mean",
+    )
+    expected_img = np.array([[1.75]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+def test_axis_aligned_projection_limited_depth_mean_with_weight(
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode mean, basic set-up."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="mean",
+    )
+    expected_img = np.array([[0.65 / 0.275]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)

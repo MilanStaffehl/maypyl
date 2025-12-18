@@ -10,7 +10,7 @@ import numpy as np
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ._types import NDArray
+    from ._types import AnyFloat, NDArray
 
 
 __all__ = ["axis_aligned_cell_projection"]
@@ -30,10 +30,11 @@ def axis_aligned_cell_projection(
     cell_edges: Array1DCollection,
     values: Array1D,
     weights: Array1D | None = None,
-    extent: Array1D | Sequence[float | np.floating[Any]] | None = None,
+    extent: Array1D | Sequence[AnyFloat] | None = None,
     nx_bins: int = 50,
     ny_bins: int = 50,
     projection_axis: Literal["x", "y", "z"] = "z",
+    projection_range: tuple[AnyFloat, AnyFloat] | None = None,
     mode: Literal["sum", "mean"] = "sum",
 ) -> tuple[Image, Edges]:
     """
@@ -46,6 +47,17 @@ def axis_aligned_cell_projection(
     grids. The function projects the given value along one of the three
     major axes, creating an image parallel to the plane of the other
     two axes.
+
+    .. hint:: This function iterates over the pixels in the image to
+        determine cells that at least partially cover this pixel. This
+        is very efficient in cases where cells are so large that they
+        cover many pixels, but inefficient in the inverse case of any
+        one pixel covering many cells. It is therefore recommended to
+        only use this function when the projected size of cells is
+        larger or comparable to the size of cells. In the case of large
+        pixels and small cells, a simple 2D histogram of values at the
+        cell center approximates the result of this function sufficiently
+        well and is recommended instead.
 
     The information on cell geometry must be given as a 6-tuple of
     numpy arrays, or alternatively a numpy array of shape (6, N), where
@@ -128,6 +140,20 @@ def axis_aligned_cell_projection(
       coordinate; image coordinate ``v`` is equivalent to the ``y``
       coordinate.
 
+    The projection can be limited to a specific range of values along
+    the projection axis, using ``projection_range``. If this value is
+    not specified, all cells along the projection axis will be considered.
+
+    .. warning:: This function does not currently take into account the
+        length of the column each pixel projects along. This means that
+        if your cells are not starting and ending at the same depth
+        along the projection axis, columns will have a different length.
+        In such a case, all resulting projections in mode ``sum`` will
+        be wrong as they sum over columns of different length. For
+        protrusions that are small compared to the average column length,
+        this error will be negligible, but it can become significant for
+        vastly different column lengths.
+
     :param cell_edges: Either a 6-tuple of numpy arrays or an array of
         shape (6, N). The six arrays must contain the lower and upper
         edges of all cells, in the order ``(x_lower, y_lower, z_lower,
@@ -158,6 +184,13 @@ def axis_aligned_cell_projection(
         must be one of the three principal axes. This parameter must be
         one of the following strings: ``"x"``, ``"y"``, or ``"z"``.
         Defaults to ``"z"``.
+    :param projection_range: A tuple of floats in the same units as the
+        ``cell_edges``, giving the minimum and maximum coordinate along
+        the projection axis within which cells shall be considered. All
+        cells that lie entirely outside of this range along the projection
+        axis will be discarded and not considered for the projection.
+        Optional, defaults to ``None``, which means all cells will be
+        used, irrespective of their position along the projection axis.
     :param mode: The projection mode to use. This must either be ``"sum"``
         or ``"mean"`. Mode ``sum`` means that all values along a pixel
         line of sight are summed (weighted by the respective cell depth
@@ -191,15 +224,18 @@ def axis_aligned_cell_projection(
     # the corresponding depth per cell:
     if projection_axis == "x":
         u_low, u_upp, v_low, v_upp = y_low, y_upp, z_low, z_upp
-        cell_depths = x_upp - x_low
+        w_low, w_upp = x_low, x_upp
     elif projection_axis == "y":
         u_low, u_upp, v_low, v_upp = x_low, x_upp, z_low, z_upp
-        cell_depths = y_upp - y_low
+        w_low, w_upp = y_low, y_upp
     elif projection_axis == "z":
         u_low, u_upp, v_low, v_upp = x_low, x_upp, y_low, y_upp
-        cell_depths = z_upp - z_low
+        w_low, w_upp = z_low, z_upp
     else:
         raise ValueError(f"Unrecognized projection axis: {projection_axis}")
+
+    # determine depth of each cell along projection axis
+    cell_depths = w_upp - w_low
 
     # if no weights are set, we set them to unity (equivalent to no weights)
     if weights is None:
@@ -210,13 +246,21 @@ def axis_aligned_cell_projection(
         extent = (np.min(u_low), np.max(u_upp), np.min(v_low), np.max(v_upp))
     u_min, u_max, v_min, v_max = extent
 
+    # similarly, limit the depths of cells considered
+    if projection_range is None:
+        projection_range = (np.min(w_low), np.max(w_upp))
+
     # Mask all cells that fall outside the image extent; note that we
     # compare the upper cell edge with the lower image edge, to ensure
     # that also partially covering cells are still considered. Same for
     # comparing the lower cell edge with the upper image edge.
     mask_u = np.logical_and(u_upp >= u_min, u_low <= u_max)
     mask_v = np.logical_and(v_upp >= v_min, v_low <= v_max)
+    mask_w = np.logical_and(
+        w_upp >= projection_range[0], w_low <= projection_range[1]
+    )
     in_image_mask = np.logical_and(mask_u, mask_v)
+    in_image_mask = np.logical_and(in_image_mask, mask_w)
     u_low, u_upp = u_low[in_image_mask], u_upp[in_image_mask]
     v_low, v_upp = v_low[in_image_mask], v_upp[in_image_mask]
     cell_depths = cell_depths[in_image_mask]
