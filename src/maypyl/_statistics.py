@@ -21,7 +21,9 @@ type Array1DCollection = (
     NDArray[tuple[int, int], np.floating[Any]] | Sequence[Array1D]
 )
 type Image = NDArray[tuple[int, int], np.float64]
-type Edges = NDArray[tuple[int, int], np.float64]
+type Edges = tuple[
+    NDArray[tuple[int], np.float64], NDArray[tuple[int], np.float64]
+]
 
 
 def axis_aligned_cell_projection(
@@ -34,7 +36,142 @@ def axis_aligned_cell_projection(
     projection_axis: Literal["x", "y", "z"] = "z",
     mode: Literal["sum", "mean"] = "sum",
 ) -> tuple[Image, Edges]:
-    # NOTE: integrate:
+    """
+    Create an axis-aligned projection image of a given quantity.
+
+    This function allows to create a projection of any quantity given
+    by ``value`` on an arbitrary grid structure defined by the grids
+    cell edges, provided these cells are aligned along the three cardinal
+    directions x, y, and z. Examples could be AMR grids or oct-tree
+    grids. The function projects the given value along one of the three
+    major axes, creating an image parallel to the plane of the other
+    two axes.
+
+    The information on cell geometry must be given as a 6-tuple of
+    numpy arrays, or alternatively a numpy array of shape (6, N), where
+    N is the number of cells. The six entries must be, in that order:
+
+    .. code:: (x_lower, y_lower, z_lower, x_upper, y_upper, z_upper)
+
+    That is, they must give the position of the lower and upper edge of
+    all cells in all three coordinates x, y, and z. The order of these
+    cells within each of the six arrays does not matter, **as long as**
+    it is kept consistent between all six entries of ``cell_edges``, as
+    well as ``values`` and ``weights`` (i.e. the value at index ``i`` in
+    ``values`` must belong to the cell with cell edges ``cell_edges[:, i]``).
+
+    The arrays ``values`` and ``weights`` specify the values to project
+    as well as the optional weights by which to weigh them. They must
+    be arrays of shape (N, ) when given, and must have the same cell
+    order as ``cell_edges``.
+
+    The projection can be done in one of two ways: as an integration
+    along the line of sight defined by each pixel, or as a mean over
+    this column. This is determined by the choice of ``mode``:
+
+    - ``sum``: The value given is simply summed up along the line of
+      sight, weighted by the depth of each cell, and optionally the
+      provided weights. Mathematically, this evaluates to:
+
+      .. math::
+
+          Q_p(x, y) = \\sum_i q_i(x, y) w_i(x, y) \text{cf}_i \\Delta z_i
+
+      Where :math:`i` iterates over all cells that overlap with current
+      pixel :math:`p` when projected to the image plane, :math:`q_i` is
+      the value of the quantity in each cell, :math:`w_i` is the weight
+      assigned to each cell (which is 1 if no weights are given), and
+      :math:`\\Delta z_i` is the depth of the cell along the line of sight.
+      :math:`\text{cf}_i` is the "covering fraction", i.e. the projected
+      area of the pixel that cell :math:`i` occupies:
+
+      .. math::
+
+          \text{cf}_i = \\dfrac{A_{\text{overlap} \\ i,p}}{A_\text{pixel}}
+
+      This is mode useful to create column density plots when given a
+      density per cell, or a surface brightness when given an emissivity.
+    - ``mean``: The function finds the (weighted) mean along each line
+      of sight. Mathematically, this means the value in each pixel is
+      given by
+
+      .. math ::
+
+          Q_p(x, y) = V_p(x, y) / W_p(x, y)
+
+      where the summed value :math:`V_p(x, y)` and the sum over the weights
+      :math:`W_p(x, y)` is given by:
+
+      .. math::
+
+          V_p(x, y) = \\sum_i q_i(x, y) w_i(x, y) \text{cf}_i \\Delta z_i \\
+          W_p(x, y) = \\sum_i w_i(x, y) \text{cf}_i \\Delta z_i
+
+      This mode is particularly useful to create density-weighted means
+      of quantities such as temperature or mass-weighted velocity.
+
+    In both modes, weights are optional. If no weights are desired, set
+    ``weights`` to None. In this case, all weights will be automatically
+    set to unity.
+
+    Depending on the chosen projection axis, the image axes ``u`` and
+    ``v`` (horizontal and vertical image axes respectively) will align
+    with two of the principal coordinates of the cell coordinate system:
+
+    - Projection along x: image coordinate ``u`` is equal to the ``y``
+      coordinate; image coordinate ``v`` is equivalent to the ``z``
+      coordinate.
+    - Projection along y: image coordinate ``u`` is equal to the ``x``
+      coordinate; image coordinate ``v`` is equivalent to the ``z``
+      coordinate.
+    - Projection along z: image coordinate ``u`` is equal to the ``x``
+      coordinate; image coordinate ``v`` is equivalent to the ``y``
+      coordinate.
+
+    :param cell_edges: Either a 6-tuple of numpy arrays or an array of
+        shape (6, N). The six arrays must contain the lower and upper
+        edges of all cells, in the order ``(x_lower, y_lower, z_lower,
+        x_upper, y_upper, z_upper)``. Any space not covered by cells
+        will be considered empty.
+    :param values: An array of values in each cell to project. This must
+        be an array of shape (N, ) where N is the number of cells.
+    :param weights: An optional weight for each cell. When given, this
+        must be an array of shape (N, ) where N is the number of cells.
+        Each value in the cell will be weighted by this weight. Optional,
+        defaults to None which is equivalent to setting all weights to
+        unity (i.e. unweighted projection).
+    :param extent: The extent of the final image in coordinates of the
+        cells in the form ``(u_min, u_max, v_min, v_max)``. All cells
+        that lie entirely outside of this extent are ignored. Note that
+        u and v are image coordinates, which will be equal to two of the
+        principal coordinates of the cells, depending on the choice of
+        projection axis. See above for details. When not specified, the
+        minimum and maximum along both coordinates will be used. Optional,
+        defaults to None, which means min and max coordinates will be
+        used.
+    :param nx_bins: The number of bins (i.e. pixels) along the horizontal
+        axis of the final image. Optional, defaults to 50.
+    :param ny_bins: The number of bins (i.e. pixels) along the vertical
+        axis of the final image. Optional, defaults to 50.
+    :param projection_axis: The axis along which to project the image.
+        Since this function only allows axis-aligned projections, this
+        must be one of the three principal axes. This parameter must be
+        one of the following strings: ``"x"``, ``"y"``, or ``"z"``.
+        Defaults to ``"z"``.
+    :param mode: The projection mode to use. This must either be ``"sum"``
+        or ``"mean"`. Mode ``sum`` means that all values along a pixel
+        line of sight are summed (weighted by the respective cell depth
+        and possibly weights). Mode ``mean`` takes the (weighted) mean
+        along this line of sight. See above for details. Defaults to
+        ``"sum"``.
+    :return (image, (x_edges, y_edges)): A tuple of two entries. The
+        first entry is the image as an array of shape (``ny_bins``,
+        ``nx_bins``), with the value in each pixel being the projection
+        along that pixels line of sight along the chosen projection axis.
+        The second entry is a tuple of two arrays, giving the lower edges
+        of the pixels along the image's horizontal and vertical axis,
+        respectively.
+    """
     if mode not in ["sum", "mean"]:
         raise ValueError("`mode` must be 'integrate' or 'mean")
     # verify cell edges and unpack their values
@@ -91,8 +228,8 @@ def axis_aligned_cell_projection(
     px_du = (u_max - u_min) / nx_bins  # width of a pixel in u-direction
     px_dv = (v_max - v_min) / ny_bins  # width of a pixel in v-direction
     pixel_area = px_du * px_dv
-    pixel_u_low = u_min + np.arange(nx_bins + 1) * px_du
-    pixel_v_low = v_min + np.arange(ny_bins + 1) * px_dv
+    pixel_u_low = u_min + np.arange(nx_bins + 1, dtype=np.float64) * px_du
+    pixel_v_low = v_min + np.arange(ny_bins + 1, dtype=np.float64) * px_dv
     # allocate memory for the integrated value and weights
     pixel_value = np.zeros(n_pixels, dtype=np.float64)
 
@@ -143,5 +280,5 @@ def axis_aligned_cell_projection(
     # preserve correct pixel order (pixels were stored in row-column order)
     image = pixel_value.reshape((ny_bins, nx_bins))
     # create an array of edge values
-    edges = np.array([pixel_u_low, pixel_v_low])
+    edges: Edges = pixel_u_low, pixel_v_low
     return image, edges

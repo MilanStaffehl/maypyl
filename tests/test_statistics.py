@@ -53,17 +53,22 @@ def base_cell_setup() -> CellSetupType:
 
 def assert_cell_setup(
     image: npt.NDArray[np.float64],
-    im_edges: npt.NDArray[np.float64],
+    im_edges: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]],
     expected_image: npt.NDArray[np.float64],
-    expected_edges: npt.NDArray[np.float64],
+    expected_edges: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]],
 ) -> None:
     """Helper function to assert the outcome of a simple test scenario."""
     assert isinstance(image, np.ndarray)
-    assert isinstance(im_edges, np.ndarray)
+    assert isinstance(im_edges, tuple)
+    assert len(im_edges) == 2
+    assert isinstance(im_edges[0], np.ndarray)
+    assert isinstance(im_edges[1], np.ndarray)
     assert image.shape == expected_image.shape
-    assert im_edges.shape == expected_edges.shape
+    assert im_edges[0].shape == expected_edges[0].shape
+    assert im_edges[1].shape == expected_edges[1].shape
     np.testing.assert_almost_equal(image, expected_image)
-    np.testing.assert_almost_equal(im_edges, expected_edges)
+    np.testing.assert_almost_equal(im_edges[0], expected_edges[0])
+    np.testing.assert_almost_equal(im_edges[1], expected_edges[1])
 
 
 def test_axis_aligned_projection_single_sum_no_weight(
@@ -80,7 +85,7 @@ def test_axis_aligned_projection_single_sum_no_weight(
         mode="sum",
     )
     expected_img = np.array([[0.3]])
-    expected_edges = np.array([[0.0, 1.0], [0.0, 1.0]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -100,7 +105,7 @@ def test_axis_aligned_projection_single_sum_with_weight(
         mode="sum",
     )
     expected_img = np.array([[0.7]])
-    expected_edges = np.array([[0.0, 1.0], [0.0, 1.0]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -118,7 +123,7 @@ def test_axis_aligned_projection_single_mean_no_weight(
         mode="mean",
     )
     expected_img = np.array([[0.15]])
-    expected_edges = np.array([[0.0, 1.0], [0.0, 1.0]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -138,7 +143,7 @@ def test_axis_aligned_projection_single_mean_with_weight(
         mode="mean",
     )
     expected_img = np.array([[0.7 / 6.0]])
-    expected_edges = np.array([[0.0, 1.0], [0.0, 1.0]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -156,7 +161,7 @@ def test_axis_aligned_projection_base_sum_no_weight(
         mode="sum",
     )
     expected_img = np.array([[1.75]])
-    expected_edges = np.array([[0.25, 0.75], [0.25, 0.75]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -176,7 +181,7 @@ def test_axis_aligned_projection_base_sum_with_weight(
         mode="sum",
     )
     expected_img = np.array([[1.9]])
-    expected_edges = np.array([[0.25, 0.75], [0.25, 0.75]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -197,7 +202,7 @@ def test_axis_aligned_projection_base_mean_no_weight(
     # to the unweighted sum scenario as the sum of the weights turns out
     # to be unity - simply a byproduct of the geometry.
     expected_img = np.array([[1.75]])
-    expected_edges = np.array([[0.25, 0.75], [0.25, 0.75]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -217,7 +222,7 @@ def test_axis_aligned_projection_base_mean_with_weight(
         mode="mean",
     )
     expected_img = np.array([[15.2 / 8.2]])
-    expected_edges = np.array([[0.25, 0.75], [0.25, 0.75]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -236,7 +241,7 @@ def test_axis_aligned_projection_offset_sum_no_weights(
         mode="sum",
     )
     expected_img = np.array([[1.9]])
-    expected_edges = np.array([[0.1, 0.6], [0.1, 0.6]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -257,7 +262,7 @@ def test_axis_aligned_projection_offset_sum_with_weights(
         mode="sum",
     )
     expected_img = np.array([[1.936]])
-    expected_edges = np.array([[0.1, 0.6], [0.1, 0.6]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -277,7 +282,7 @@ def test_axis_aligned_projection_offset_mean_no_weights(
     )
     # again, the geometry causes the sum of the weights to evaluate to 1.
     expected_img = np.array([[1.9]])
-    expected_edges = np.array([[0.1, 0.6], [0.1, 0.6]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -298,7 +303,7 @@ def test_axis_aligned_projection_offset_mean_with_weights(
         mode="mean",
     )
     expected_img = np.array([[1.936 / 0.956]])
-    expected_edges = np.array([[0.1, 0.6], [0.1, 0.6]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
 
@@ -318,11 +323,9 @@ def test_axis_aligned_projection_multipixel_sum_no_weights(
     expected_img = np.array(
         [[2.0, 2.0, 2.0], [1.75, 1.75, 1.75], [1.5, 1.5, 1.5]]
     )
-    expected_edges = np.array(
-        [
-            [0.1, 0.36666667, 0.63333333, 0.9],
-            [0.1, 0.36666667, 0.63333333, 0.9],
-        ]
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
     )
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
@@ -345,11 +348,9 @@ def test_axis_aligned_projection_multipixel_sum_with_weights(
     expected_img = np.array(
         [[2.0, 1.775, 1.55], [2.025, 1.9, 1.775], [2.05, 2.025, 2.0]]
     )
-    expected_edges = np.array(
-        [
-            [0.1, 0.36666667, 0.63333333, 0.9],
-            [0.1, 0.36666667, 0.63333333, 0.9],
-        ]
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
     )
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
@@ -371,11 +372,9 @@ def test_axis_aligned_projection_multipixel_mean_no_weights(
     expected_img = np.array(
         [[2.0, 2.0, 2.0], [1.75, 1.75, 1.75], [1.5, 1.5, 1.5]]
     )
-    expected_edges = np.array(
-        [
-            [0.1, 0.36666667, 0.63333333, 0.9],
-            [0.1, 0.36666667, 0.63333333, 0.9],
-        ]
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
     )
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
@@ -402,10 +401,8 @@ def test_axis_aligned_projection_multipixel_mean_with_weights(
             [2.05 / 1.05, 2.025 / 1.275, 2.0 / 1.5],
         ]
     )
-    expected_edges = np.array(
-        [
-            [0.1, 0.36666667, 0.63333333, 0.9],
-            [0.1, 0.36666667, 0.63333333, 0.9],
-        ]
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
     )
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
