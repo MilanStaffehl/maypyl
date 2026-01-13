@@ -277,7 +277,7 @@ def axis_aligned_cell_projection(
     # allocate memory for the integrated value and weights
     pixel_value = np.zeros(n_pixels, dtype=np.float64)
 
-    # loop over the pixels and sum/integrate along their normal
+    # loop over the pixels and sum/find the mean along their normal
     for i in range(n_pixels):
         # shorthands for current values
         row_idx = int(np.floor(i / nx_bins))
@@ -307,18 +307,20 @@ def axis_aligned_cell_projection(
             - np.maximum(v_low_curr, px_v_low),
         )
         overlap_area = dv_overlap * du_overlap
-        cf = np.minimum(1, overlap_area / pixel_area)
 
         # for the current pixel, add the values of all cells, weighted by the
         # covering fraction, the weight, and potentially the cell depth
         px_value = np.sum(
-            current_values * current_weights * current_depths * cf
+            current_values * current_weights * current_depths * overlap_area
         )
         if mode == "mean":
-            px_weights = np.sum(current_weights * current_depths * cf)
+            px_weights = np.sum(
+                current_weights * current_depths * overlap_area
+            )
+            # area of pixel cancels out, we divide only by sum of weights
             pixel_value[i] = px_value / px_weights
         else:
-            pixel_value[i] = px_value
+            pixel_value[i] = px_value / pixel_area
 
     # reshape the image into the proper shape. Shape must be (Y, X) to
     # preserve correct pixel order (pixels were stored in row-column order)
