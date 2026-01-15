@@ -36,6 +36,7 @@ def axis_aligned_cell_projection(
     projection_axis: Literal["x", "y", "z"] = "z",
     projection_range: tuple[AnyFloat, AnyFloat] | None = None,
     mode: Literal["sum", "mean"] = "sum",
+    method: Literal["average", "ray"] = "average",
 ) -> tuple[ImageArray, EdgesTuple]:
     """
     Create an axis-aligned projection image of a given quantity.
@@ -60,7 +61,7 @@ def axis_aligned_cell_projection(
     larger than your pixels, or you can afford high pixel resolutions.
     If instead you require high detail fidelity, even at low pixel
     resolutions, prefer the function :func:`axis_aligned_ray_projection`
-    instead.
+    instead. See further below for mathematical details.
 
     .. hint:: This function iterates over the pixels in the image to
         determine cells that at least partially cover this pixel. This
@@ -101,20 +102,18 @@ def axis_aligned_cell_projection(
 
       .. math::
 
-          Q_p(x, y) = \\sum_i q_i(x, y) w_i(x, y) \text{cf}_i \\Delta z_i
+          Q_p(x, y) = \\dfrac{1}{A_\\text{px}}
+          \\sum_i q_i(x, y) w_i(x, y) A_{\\text{overlap},i} \\Delta z_i
 
       Where :math:`i` iterates over all cells that overlap with current
       pixel :math:`p` when projected to the image plane, :math:`q_i` is
       the value of the quantity in each cell, :math:`w_i` is the weight
       assigned to each cell (which is 1 if no weights are given), and
       :math:`\\Delta z_i` is the depth of the cell along the line of sight.
-      :math:`\text{cf}_i` is the "covering fraction", i.e. the projected
-      area of the pixel that cell :math:`i` occupies:
-
-      .. math::
-
-          \text{cf}_i = \\dfrac{A_{\text{overlap} \\ i,p}}{A_\text{pixel}}
-
+      :math:`A_{\\text{overlap},i}` is the "overlap area" of the i-th
+      cell with the current pixel. Normalization with the pixel area
+      :math:`A_\\text{px}` then finalizes the projection and corrects
+      the units.
       This is mode useful to create column density plots when given a
       density per cell, or a surface brightness when given an emissivity.
     - ``mean``: The function finds the (weighted) mean along each line
@@ -130,8 +129,9 @@ def axis_aligned_cell_projection(
 
       .. math::
 
-          V_p(x, y) = \\sum_i q_i(x, y) w_i(x, y) \text{cf}_i \\Delta z_i \\
-          W_p(x, y) = \\sum_i w_i(x, y) \text{cf}_i \\Delta z_i
+          V_p(x, y) = \\sum_i q_i(x, y) w_i(x, y) A_{\\text{overlap},i}
+            \\Delta z_i; \\\\
+          W_p(x, y) = \\sum_i w_i(x, y) A_{\\text{overlap},i} \\Delta z_i
 
       This mode is particularly useful to create density-weighted means
       of quantities such as temperature or mass-weighted velocity.
@@ -163,10 +163,10 @@ def axis_aligned_cell_projection(
         if your cells are not starting and ending at the same depth
         along the projection axis, columns will have a different length.
         In such a case, all resulting projections in mode ``sum`` will
-        be wrong as they sum over columns of different length. For
-        protrusions that are small compared to the average column length,
-        this error will be negligible, but it can become significant for
-        vastly different column lengths.
+        be slightly wrong as they sum over columns of different length.
+        For protrusions that are small compared to the average column
+        length, this error will be negligible, but it can become
+        significant for vastly different column lengths.
 
     :param cell_edges: Either a 6-tuple of numpy arrays or an array of
         shape (6, N). The six arrays must contain the lower and upper
