@@ -36,7 +36,6 @@ def axis_aligned_cell_projection(
     projection_axis: Literal["x", "y", "z"] = "z",
     projection_range: tuple[AnyFloat, AnyFloat] | None = None,
     mode: Literal["sum", "mean"] = "sum",
-    method: Literal["average", "ray"] = "average",
 ) -> tuple[ImageArray, EdgesTuple]:
     """
     Create an axis-aligned projection image of a given quantity.
