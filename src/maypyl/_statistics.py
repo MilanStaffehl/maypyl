@@ -20,8 +20,8 @@ type Array1D = NDArray[tuple[int], np.floating[Any]]
 type Array1DCollection = (
     NDArray[tuple[int, int], np.floating[Any]] | Sequence[Array1D]
 )
-type Image = NDArray[tuple[int, int], np.float64]
-type Edges = tuple[
+type ImageArray = NDArray[tuple[int, int], np.float64]
+type EdgesTuple = tuple[
     NDArray[tuple[int], np.float64], NDArray[tuple[int], np.float64]
 ]
 
@@ -36,17 +36,31 @@ def axis_aligned_cell_projection(
     projection_axis: Literal["x", "y", "z"] = "z",
     projection_range: tuple[AnyFloat, AnyFloat] | None = None,
     mode: Literal["sum", "mean"] = "sum",
-) -> tuple[Image, Edges]:
+) -> tuple[ImageArray, EdgesTuple]:
     """
     Create an axis-aligned projection image of a given quantity.
 
     This function allows to create a projection of any quantity given
-    by ``value`` on an arbitrary grid structure defined by the grids
-    cell edges, provided these cells are aligned along the three cardinal
-    directions x, y, and z. Examples could be AMR grids or oct-tree
-    grids. The function projects the given value along one of the three
-    major axes, creating an image parallel to the plane of the other
-    two axes.
+    by ``value`` on an arbitrary cartesian grid structure defined by the
+    grids cell edges, provided these cells are aligned along the three
+    cardinal directions x, y, and z. Examples could be AMR grids or
+    oct-tree grids. The function projects the given value along one of
+    the three major axes, creating an image parallel to the plane of the
+    other two axes.
+
+    The resulting image shows, in every pixel, the pixel-area-averaged
+    sum or mean along the LOS column of that pixel, potentially weighted
+    by the given weights. This is equivalent to evaluating the sum or mean
+    along an infinite number of rays uniformly covering the entire pixel.
+    As such, it differs from traditional methods of projection, which
+    often use a single or multiple rays along the pixel normal and
+    evaluate only cells that this ray traverses. Finer details from cells
+    much smaller than the pixel are therefore washed out by this method.
+    Prefer this method when your cells are typically larger or much
+    larger than your pixels, or you can afford high pixel resolutions.
+    If instead you require high detail fidelity, even at low pixel
+    resolutions, prefer the function :func:`axis_aligned_ray_projection`
+    instead.
 
     .. hint:: This function iterates over the pixels in the image to
         determine cells that at least partially cover this pixel. This
@@ -206,7 +220,7 @@ def axis_aligned_cell_projection(
         respectively.
     """
     if mode not in ["sum", "mean"]:
-        raise ValueError("`mode` must be 'integrate' or 'mean")
+        raise ValueError("`mode` must be 'sum' or 'mean")
     # verify cell edges and unpack their values
     if isinstance(cell_edges, np.ndarray):
         if not cell_edges.ndim == 2 and cell_edges.shape[0] == 6:
@@ -269,12 +283,12 @@ def axis_aligned_cell_projection(
 
     # create a pixel image grid
     n_pixels = nx_bins * ny_bins
-    px_du = (u_max - u_min) / nx_bins  # width of a pixel in u-direction
-    px_dv = (v_max - v_min) / ny_bins  # width of a pixel in v-direction
+    px_du: AnyFloat = (u_max - u_min) / nx_bins  # pixel width in u-direction
+    px_dv: AnyFloat = (v_max - v_min) / ny_bins  # pixel width in v-direction
     pixel_area = px_du * px_dv
     pixel_u_low = u_min + np.arange(nx_bins + 1, dtype=np.float64) * px_du
     pixel_v_low = v_min + np.arange(ny_bins + 1, dtype=np.float64) * px_dv
-    # allocate memory for the integrated value and weights
+    # allocate memory for the integrated value
     pixel_value = np.zeros(n_pixels, dtype=np.float64)
 
     # loop over the pixels and sum/find the mean along their normal
@@ -326,5 +340,5 @@ def axis_aligned_cell_projection(
     # preserve correct pixel order (pixels were stored in row-column order)
     image = pixel_value.reshape((ny_bins, nx_bins))
     # create an array of edge values
-    edges: Edges = pixel_u_low, pixel_v_low
+    edges: EdgesTuple = pixel_u_low, pixel_v_low
     return image, edges
