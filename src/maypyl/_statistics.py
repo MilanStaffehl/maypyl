@@ -26,7 +26,7 @@ type EdgesTuple = tuple[
 ]
 
 
-def axis_aligned_cell_projection(
+def axis_aligned_cell_projection(  # noqa: C901
     cell_edges: Array1DCollection,
     values: Array1D,
     weights: Array1D | None = None,
@@ -36,6 +36,7 @@ def axis_aligned_cell_projection(
     projection_axis: Literal["x", "y", "z"] = "z",
     projection_range: tuple[AnyFloat, AnyFloat] | None = None,
     mode: Literal["sum", "mean"] = "sum",
+    method: Literal["area average", "ray"] = "area average",
 ) -> tuple[ImageArray, EdgesTuple]:
     """
     Create an axis-aligned projection image of a given quantity.
@@ -48,19 +49,42 @@ def axis_aligned_cell_projection(
     the three major axes, creating an image parallel to the plane of the
     other two axes.
 
-    The resulting image shows, in every pixel, the pixel-area-averaged
-    sum or mean along the LOS column of that pixel, potentially weighted
-    by the given weights. This is equivalent to evaluating the sum or mean
-    along an infinite number of rays uniformly covering the entire pixel.
-    As such, it differs from traditional methods of projection, which
-    often use a single or multiple rays along the pixel normal and
-    evaluate only cells that this ray traverses. Finer details from cells
-    much smaller than the pixel are therefore washed out by this method.
-    Prefer this method when your cells are typically larger or much
-    larger than your pixels, or you can afford high pixel resolutions.
-    If instead you require high detail fidelity, even at low pixel
-    resolutions, prefer the function :func:`axis_aligned_ray_projection`
-    instead. See further below for mathematical details.
+    What the resulting image shows depends on the choice of ``method``:
+
+    - ``area average``: The default. Image shows, in every pixel, the
+      pixel-area-averaged sum or mean along the LOS column of that pixel,
+      potentially weighted by the given weights. This is equivalent to
+      evaluating the sum or mean along an infinite number of rays
+      uniformly covering the entire pixel. As such, it differs from the
+      ``ray`` method below in washing out finer details from cells
+      much smaller than the pixel. Prefer this method when your cells
+      are typically larger or much larger than your pixels, or you can
+      afford high pixel resolutions. If instead you require high detail
+      fidelity, even at low pixel resolutions, prefer the ``ray`` method
+      instead. This method is roughly equivalent to what an instrument
+      with extended collection pixels (i.e. a CCD-chip) would see of the
+      quantity.
+    - ``ray``: The image shows the sum or mean along a single ray,
+      centered on each pixel, weighted by the length of each cell and
+      potentially the weights. This is the traditional method, used in
+      tools such as ``yt``. It preserves high-value peaks instead of
+      washing them out by area-averaging, but it can miss high-value
+      cells if the cells are very small compared to the pixel size. This
+      method does not use supersampling of pixels; it sends only one ray
+      per pixel. Prefer this method when your grid cells are aligned
+      with the pixel grid, as it then accurately represents the structure
+      of your grid at slightly lower computational cost. This method is
+      a visualization of projections along a number of ``nx_bins`` x
+      ``ny_bins`` of pixels, completely neglecting all cells not traversed
+      by these rays. It is therefore often the more theoretically correct
+      method (for example when projecting densities to get column
+      densities, this method directly follows the theoretical definition
+      of a column density), but very high or very low value cells can
+      easily be missed if cells are small. This may lead to
+      misinterpretations of results when not well understood.
+
+    For cells that are large, or sufficiently high pixel resolution,
+    both methods produce similar or identical images.
 
     .. hint:: This function iterates over the pixels in the image to
         determine cells that at least partially cover this pixel. This
@@ -97,7 +121,8 @@ def axis_aligned_cell_projection(
 
     - ``sum``: The value given is simply summed up along the line of
       sight, weighted by the depth of each cell, and optionally the
-      provided weights. Mathematically, this evaluates to:
+      provided weights. When using the method ``area average``, this
+      mathematically evaluates to:
 
       .. math::
 
@@ -113,24 +138,45 @@ def axis_aligned_cell_projection(
       cell with the current pixel. Normalization with the pixel area
       :math:`A_\\text{px}` then finalizes the projection and corrects
       the units.
+      When using the method ``ray``, this instead evaluates to:
+
+      .. math::
+
+            Q_p(x, y) = \\sum_j q_j(x_c, y_c) w_j(x_c, y_c) \\Delta z_j
+
+      where :math:`j` iterates over all cells that the ray in the center
+      of the pixel at coordinates :math:`(x_c, y_c)` traverses,
+      :math:`q_j` is the value of the quantity in that cell, :math:`w_j`
+      is the weight assigned to the cell (which is 1 if no weights are
+      given), and :math:`\\Delta z_i` is the depth of the cell along the
+      ray.
       This is mode useful to create column density plots when given a
       density per cell, or a surface brightness when given an emissivity.
     - ``mean``: The function finds the (weighted) mean along each line
-      of sight. Mathematically, this means the value in each pixel is
-      given by
+      of sight. When using the ``area average`` method, this means that,
+      mathematically, the value in each pixel is given by
 
       .. math ::
 
           Q_p(x, y) = V_p(x, y) / W_p(x, y)
 
-      where the summed value :math:`V_p(x, y)` and the sum over the weights
-      :math:`W_p(x, y)` is given by:
+      where we use the same indices as above, and where the summed value
+      :math:`V_p(x, y)` and the sum over the weights :math:`W_p(x, y)`
+      are given by:
 
       .. math::
 
           V_p(x, y) = \\sum_i q_i(x, y) w_i(x, y) A_{\\text{overlap},i}
             \\Delta z_i; \\\\
           W_p(x, y) = \\sum_i w_i(x, y) A_{\\text{overlap},i} \\Delta z_i
+
+      In contrast, using method ``ray``, the summed value and weights
+      are determined by
+
+      .. math::
+
+          V_p(x, y) = \\sum_j q_j(x_c, y_c) w_j(x_c, y_c) \\Delta z_j; \\\\
+          W_p(x, y) = \\sum_j w_j(x_c, y_c) \\Delta z_j
 
       This mode is particularly useful to create density-weighted means
       of quantities such as temperature or mass-weighted velocity.
@@ -210,6 +256,11 @@ def axis_aligned_cell_projection(
         and possibly weights). Mode ``mean`` takes the (weighted) mean
         along this line of sight. See above for details. Defaults to
         ``"sum"``.
+    :param method: What method to use to calculte projections. Can be
+        either ``area average`` for a pixel-area averaged value, or
+        ``ray`` for a value integrated along a single ray from the
+        center of each pixel. See above for details. Defaults to ``area
+        average``.
     :return (image, (x_edges, y_edges)): A tuple of two entries. The
         first entry is the image as an array of shape (``ny_bins``,
         ``nx_bins``), with the value in each pixel being the projection
@@ -281,13 +332,13 @@ def axis_aligned_cell_projection(
     weights = weights[in_image_mask]
 
     # create a pixel image grid
-    n_pixels = nx_bins * ny_bins
     px_du: AnyFloat = (u_max - u_min) / nx_bins  # pixel width in u-direction
     px_dv: AnyFloat = (v_max - v_min) / ny_bins  # pixel width in v-direction
     pixel_area = px_du * px_dv
     pixel_u_low = u_min + np.arange(nx_bins + 1, dtype=np.float64) * px_du
     pixel_v_low = v_min + np.arange(ny_bins + 1, dtype=np.float64) * px_dv
     # allocate memory for the integrated value
+    n_pixels = nx_bins * ny_bins
     pixel_value = np.zeros(n_pixels, dtype=np.float64)
 
     # loop over the pixels and sum/find the mean along their normal
@@ -298,42 +349,70 @@ def axis_aligned_cell_projection(
         px_u_low, px_u_upp = pixel_u_low[col_idx], pixel_u_low[col_idx + 1]
         px_v_low, px_v_upp = pixel_v_low[row_idx], pixel_v_low[row_idx + 1]
 
-        # mask all cells that lie outside the current pixel for sure
-        mask_u = np.logical_and(u_upp >= px_u_low, u_low <= px_u_upp)
-        mask_v = np.logical_and(v_upp >= px_v_low, v_low <= px_v_upp)
-        in_pixel_mask = np.logical_and(mask_u, mask_v)
-        current_values = values[in_pixel_mask]
-        current_weights = weights[in_pixel_mask]
-        current_depths = cell_depths[in_pixel_mask]
-        u_low_curr, u_upp_curr = u_low[in_pixel_mask], u_upp[in_pixel_mask]
-        v_low_curr, v_upp_curr = v_low[in_pixel_mask], v_upp[in_pixel_mask]
+        if method == "area average":
+            # mask all cells that lie outside the current pixel for sure
+            mask_u = np.logical_and(u_upp >= px_u_low, u_low <= px_u_upp)
+            mask_v = np.logical_and(v_upp >= px_v_low, v_low <= px_v_upp)
+            in_pixel_mask = np.logical_and(mask_u, mask_v)
+            current_values = values[in_pixel_mask]
+            current_weights = weights[in_pixel_mask]
+            current_depths = cell_depths[in_pixel_mask]
+            u_low_curr, u_upp_curr = u_low[in_pixel_mask], u_upp[in_pixel_mask]
+            v_low_curr, v_upp_curr = v_low[in_pixel_mask], v_upp[in_pixel_mask]
 
-        # for these selected pixels, calculate the covering fraction
-        du_overlap = np.maximum(
-            0,
-            np.minimum(u_upp_curr, px_u_upp)
-            - np.maximum(u_low_curr, px_u_low),
-        )
-        dv_overlap = np.maximum(
-            0,
-            np.minimum(v_upp_curr, px_v_upp)
-            - np.maximum(v_low_curr, px_v_low),
-        )
-        overlap_area = dv_overlap * du_overlap
-
-        # for the current pixel, add the values of all cells, weighted by the
-        # covering fraction, the weight, and potentially the cell depth
-        px_value = np.sum(
-            current_values * current_weights * current_depths * overlap_area
-        )
-        if mode == "mean":
-            px_weights = np.sum(
-                current_weights * current_depths * overlap_area
+            # for these selected pixels, calculate the covering fraction
+            du_overlap = np.maximum(
+                0,
+                np.minimum(u_upp_curr, px_u_upp)
+                - np.maximum(u_low_curr, px_u_low),
             )
-            # area of pixel cancels out, we divide only by sum of weights
+            dv_overlap = np.maximum(
+                0,
+                np.minimum(v_upp_curr, px_v_upp)
+                - np.maximum(v_low_curr, px_v_low),
+            )
+            overlap_area = dv_overlap * du_overlap
+
+            # for the current pixel, add the values of all cells, weighted by
+            # the covering fraction, the weight, and potentially the cell
+            # depth...
+            px_sum = np.sum(
+                current_values
+                * current_weights
+                * current_depths
+                * overlap_area
+            )
+            # ...and then divide by the pixel area to achieve correct values
+            px_value = px_sum / pixel_area
+            px_weights = (
+                np.sum(current_weights * current_depths * overlap_area)
+                / pixel_area
+            )
+        elif method == "ray":
+            # find all cells that intercept the ray at the pixel center
+            ray_u = (px_u_low + px_u_upp) / 2
+            ray_v = (px_v_low + px_v_upp) / 2
+            ray_intercept_u = np.logical_and(u_low <= ray_u, u_upp > ray_u)
+            ray_intercept_v = np.logical_and(v_low <= ray_v, v_upp > ray_v)
+            ray_intercept_mask = np.logical_and(
+                ray_intercept_u, ray_intercept_v
+            )
+            # mask values to only these cells
+            current_values = values[ray_intercept_mask]
+            current_weights = weights[ray_intercept_mask]
+            current_depths = cell_depths[ray_intercept_mask]
+            # sum along the ray
+            px_value = np.sum(
+                current_values * current_weights * current_depths
+            )
+            px_weights = np.sum(current_weights * current_depths)
+        else:
+            raise ValueError(f"Unknown method {method}")
+        # normalize value by weights if average is requested
+        if mode == "mean":
             pixel_value[i] = px_value / px_weights
         else:
-            pixel_value[i] = px_value / pixel_area
+            pixel_value[i] = px_value
 
     # reshape the image into the proper shape. Shape must be (Y, X) to
     # preserve correct pixel order (pixels were stored in row-column order)
