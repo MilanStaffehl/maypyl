@@ -1,8 +1,8 @@
 <h1 align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./docs/resources/header_dark.png">
-      <source media="(prefers-color-scheme: light)" srcset="./docs/resources/header_light.png">
-      <img alt="maypyl logo" src="./docs/resources/header_light.png" width="1000px">
+      <source media="(prefers-color-scheme: dark) and (max-width: 500px)" srcset="./docs/resources/header_dark.png">
+      <source media="(prefers-color-scheme: light) and (max-width: 500px)" srcset="./docs/resources/header_light.png">
+      <img alt="maypyl logo" src="./docs/resources/header_light.png" width="500px">
     </picture>
 </h1>
 <div align="center">
@@ -11,8 +11,8 @@
   </p>
 </div>
 
-<div align="center"> 
-    
+<div align="center">
+
   [![Unit tests](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/MilanStaffehl/maypyl/actions/workflows/unit_tests.yaml)
 
 </div>
