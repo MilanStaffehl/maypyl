@@ -6,6 +6,9 @@ import warnings
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
+from mpl_toolkits.axes_grid1 import (  # type: ignore[import-untyped]
+    make_axes_locatable,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -151,6 +154,8 @@ def histogram2d(
 
     # add colorbar
     if not suppress_colorbar:
+        divider = make_axes_locatable(axes)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar_config: dict[str, Any] = {
             "location": "right",
             "label": cbar_label,
@@ -159,6 +164,6 @@ def histogram2d(
             cbar_config.update({"ticks": cbar_ticks})
         if cbar_limits is not None:
             cbar_config.update({"extend": cbar_extend})
-        fig.colorbar(profile, ax=axes, **cbar_config)
+        fig.colorbar(profile, cax=cax, **cbar_config)
 
     return fig, axes
