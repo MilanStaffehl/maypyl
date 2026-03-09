@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 from mpl_toolkits.axes_grid1 import (  # type: ignore[import-untyped]
@@ -14,10 +14,53 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from matplotlib.axes import Axes
+    from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Colormap
     from matplotlib.figure import Figure
 
     from maypyl._types import NDArray
+
+
+@overload
+def histogram2d(
+    fig: Figure,
+    axes: Axes,
+    histogram_2d: NDArray[tuple[int, int], np.floating[Any]],
+    ranges: Sequence[float] | NDArray[tuple[int], np.floating[Any]],
+    xlabel: str | None = ...,
+    ylabel: str | None = ...,
+    title: str | None = ...,
+    value_range: Sequence[float] | None = ...,
+    colormap: str | Colormap = ...,
+    cbar_label: str = ...,
+    cbar_ticks: NDArray[tuple[int], np.floating[Any]] | None = ...,
+    cbar_limits: Sequence[float | None] | None = ...,
+    scale: Literal["linear", "log"] = ...,
+    labelsize: int = ...,
+    suppress_colorbar: bool = ...,
+    return_scalar_mappable: Literal[False] = ...,
+) -> tuple[Figure, Axes]: ...
+
+
+@overload
+def histogram2d(
+    fig: Figure,
+    axes: Axes,
+    histogram_2d: NDArray[tuple[int, int], np.floating[Any]],
+    ranges: Sequence[float] | NDArray[tuple[int], np.floating[Any]],
+    xlabel: str | None = ...,
+    ylabel: str | None = ...,
+    title: str | None = ...,
+    value_range: Sequence[float] | None = ...,
+    colormap: str | Colormap = ...,
+    cbar_label: str = ...,
+    cbar_ticks: NDArray[tuple[int], np.floating[Any]] | None = ...,
+    cbar_limits: Sequence[float | None] | None = ...,
+    scale: Literal["linear", "log"] = ...,
+    labelsize: int = ...,
+    suppress_colorbar: bool = ...,
+    return_scalar_mappable: Literal[True] = ...,
+) -> tuple[Figure, Axes, ScalarMappable]: ...
 
 
 def histogram2d(
@@ -36,7 +79,8 @@ def histogram2d(
     scale: Literal["linear", "log"] = "linear",
     labelsize: int = 12,
     suppress_colorbar: bool = False,
-) -> tuple[Figure, Axes]:
+    return_scalar_mappable: bool = False,
+) -> tuple[Figure, Axes] | tuple[Figure, Axes, ScalarMappable]:
     """
     Plot the given 2D histogram.
 
@@ -99,6 +143,11 @@ def histogram2d(
         defaults to 12 pt.
     :param suppress_colorbar: When set to True, no colorbar is added to
         the figure.
+    :param return_scalar_mappable: When set to True, the function will
+        return the ``ScalarMappable`` instance returned by ``imshow``
+        alongside the figure and axes instances. This is useful for
+        adding a colorbar manually later, for example in multi-axes
+        plots that will share a common colorbar.
     :return: The figure and axes objects as tuple with the histogram
         added to them; returned for convenience, axes object is altered
         in place.
@@ -166,4 +215,6 @@ def histogram2d(
             cbar_config.update({"extend": cbar_extend})
         fig.colorbar(profile, cax=cax, **cbar_config)
 
+    if return_scalar_mappable:
+        return fig, axes, profile
     return fig, axes
