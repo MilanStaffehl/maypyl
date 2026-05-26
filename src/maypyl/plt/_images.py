@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, overload
 
+import matplotlib
 import numpy as np
 from mpl_toolkits.axes_grid1 import (  # type: ignore[import-untyped]
     make_axes_locatable,
@@ -30,11 +31,10 @@ def histogram2d(
     xlabel: str | None = ...,
     ylabel: str | None = ...,
     title: str | None = ...,
-    value_range: Sequence[float] | None = ...,
+    value_range: tuple[float | None, float | None] | None = ...,
     colormap: str | Colormap = ...,
     cbar_label: str = ...,
     cbar_ticks: NDArray[tuple[int], np.floating[Any]] | None = ...,
-    cbar_limits: Sequence[float | None] | None = ...,
     scale: Literal["linear", "log"] = ...,
     labelsize: int = ...,
     suppress_colorbar: bool = ...,
@@ -51,11 +51,10 @@ def histogram2d(
     xlabel: str | None = ...,
     ylabel: str | None = ...,
     title: str | None = ...,
-    value_range: Sequence[float] | None = ...,
+    value_range: tuple[float | None, float | None] | None = ...,
     colormap: str | Colormap = ...,
     cbar_label: str = ...,
     cbar_ticks: NDArray[tuple[int], np.floating[Any]] | None = ...,
-    cbar_limits: Sequence[float | None] | None = ...,
     scale: Literal["linear", "log"] = ...,
     labelsize: int = ...,
     suppress_colorbar: bool = ...,
@@ -63,7 +62,7 @@ def histogram2d(
 ) -> tuple[Figure, Axes, ScalarMappable]: ...
 
 
-def histogram2d(
+def histogram2d(  # noqa: C901
     fig: Figure,
     axes: Axes,
     histogram_2d: NDArray[tuple[int, int], np.floating[Any]],
@@ -71,11 +70,10 @@ def histogram2d(
     xlabel: str | None = None,
     ylabel: str | None = None,
     title: str | None = None,
-    value_range: Sequence[float] | None = None,
+    value_range: tuple[float | None, float | None] | None = None,
     colormap: str | Colormap = "inferno",
     cbar_label: str = "Count",
     cbar_ticks: NDArray[tuple[int], np.floating[Any]] | None = None,
-    cbar_limits: Sequence[float | None] | None = None,
     scale: Literal["linear", "log"] = "linear",
     labelsize: int = 12,
     suppress_colorbar: bool = False,
@@ -118,7 +116,14 @@ def histogram2d(
         without a title. Can be a raw string to use formulas.
     :param value_range: The range of values for the histogram. If given,
         all values are limited to this range. Must be of the form
-        [vmin, vmax].
+        [vmin, vmax], where both can be either a float giving the limiting
+        value, or ``None`` to set a limit automatically. This allows
+        limiting values only in one direction, but not the other. The
+        colorbar will automatically receive caps, based on whether any
+        values exceed the corresponding limit. When values are given,
+        they must be in the same scale and units as the histogram data.
+        Defaults to None, which means the full range of values will be
+        considered.
     :param colormap: A matplotlib colormap for the plot. Defaults to
         "inferno".
     :param cbar_label: The label for the colorbar data. Defaults to
@@ -127,15 +132,6 @@ def histogram2d(
         appropriately.
     :param cbar_ticks: Sequence or array of the tick markers for the
         colorbar. Optional, defaults to None (automatically chosen ticks).
-    :param cbar_limits: The lower and upper limit of the colorbars as a
-        sequence [lower, upper]. All values above and below will be
-        clipped. Setting these values will assume that the colorbar is
-        not showing the full range of values, so the ends of the colorbar
-        will be turned into open ends (with an arrow-end instead of a
-        flat cap). To only limit the colorbar in one direction, set the
-        other to None: ``cbar_limits=(-1, None)``. Set to None to show
-        the full range of values in the colorbar. If ``log`` is set to
-        True, the limits must be given in logarithmic values.
     :param scale: If the histogram data is not already given in log
         scale, this parameter can be set to "log" to plot the log10 of
         the given histogram data.
@@ -161,13 +157,23 @@ def histogram2d(
         axes.set_ylabel(ylabel, fontsize=labelsize)
 
     # scaling
+    norm_class: type[matplotlib.colors.Normalize] = matplotlib.colors.Normalize
     if scale == "log":
-        with np.errstate(divide="ignore"):
-            histogram_2d = np.log10(histogram_2d)
+        if np.count_nonzero(histogram_2d <= 0):
+            raise ValueError(
+                "Histogram contains negative values or zero, cannot use "
+                "log scale."
+            )
+        norm_class = matplotlib.colors.LogNorm
+    elif scale != "linear":
+        raise ValueError("Scale must be either 'log' or 'linear'.")
 
-    # clipping (clip values and determine open ends of colorbar)
-    if cbar_limits is not None:
-        if len(cbar_limits) != 2:
+    # limit range (clip values and determine open ends of colorbar)
+    min_value = np.min(histogram_2d[np.isfinite(histogram_2d)])
+    max_value = np.max(histogram_2d[np.isfinite(histogram_2d)])
+    cbar_extend = "neither"
+    if value_range is not None:
+        if len(value_range) != 2:
             warnings.warn(
                 "The sequence of limits for the colorbar does not have length "
                 "2. Only first two values will be used for limits. This might "
@@ -175,18 +181,19 @@ def histogram2d(
                 RuntimeWarning,
                 stacklevel=2,
             )
-        lower_limit, upper_limit = -np.inf, np.inf
-        cbar_extend = "neither"
-        if cbar_limits[0] is not None:
-            lower_limit = cbar_limits[0]
-            cbar_extend = "min"
-        if cbar_limits[1] is not None:
-            upper_limit = cbar_limits[1]
-            cbar_extend = "max"
-        # clip histogram
-        histogram_2d = np.clip(histogram_2d, lower_limit, upper_limit)
+        # determine value range
+        if value_range[0] is not None:
+            min_value = value_range[0]
+        if value_range[1] is not None:
+            max_value = value_range[1]
         # determine correct colorbar extent
-        if all(cbar_limits):
+        upper_clipped = np.count_nonzero(histogram_2d > max_value)
+        lower_clipped = np.count_nonzero(histogram_2d < min_value)
+        if upper_clipped > 0:
+            cbar_extend = "max"
+        if lower_clipped > 0:
+            cbar_extend = "min"
+        if upper_clipped > 0 and lower_clipped > 0:
             cbar_extend = "both"
 
     # plot the 2D hist
@@ -198,7 +205,8 @@ def histogram2d(
         "extent": ranges,
     }
     if value_range is not None:
-        hist_config.update({"vmin": value_range[0], "vmax": value_range[1]})
+        norm = norm_class(vmin=min_value, vmax=max_value, clip=True)
+        hist_config.update({"norm": norm})
     profile = axes.imshow(histogram_2d, **hist_config)
 
     # add colorbar
@@ -208,11 +216,10 @@ def histogram2d(
         cbar_config: dict[str, Any] = {
             "location": "right",
             "label": cbar_label,
+            "extend": cbar_extend,
         }
         if cbar_ticks is not None:
             cbar_config.update({"ticks": cbar_ticks})
-        if cbar_limits is not None:
-            cbar_config.update({"extend": cbar_extend})
         fig.colorbar(profile, cax=cax, **cbar_config)
 
     if return_scalar_mappable:
