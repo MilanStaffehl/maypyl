@@ -159,11 +159,6 @@ def histogram2d(  # noqa: C901
     # scaling
     norm_class: type[matplotlib.colors.Normalize] = matplotlib.colors.Normalize
     if scale == "log":
-        if np.count_nonzero(histogram_2d <= 0):
-            raise ValueError(
-                "Histogram contains negative values or zero, cannot use "
-                "log scale."
-            )
         norm_class = matplotlib.colors.LogNorm
     elif scale != "linear":
         raise ValueError("Scale must be either 'log' or 'linear'.")
@@ -195,6 +190,13 @@ def histogram2d(  # noqa: C901
             cbar_extend = "min"
         if upper_clipped > 0 and lower_clipped > 0:
             cbar_extend = "both"
+
+    # check validity of values in log scale
+    if scale == "log" and min_value <= 0:
+        raise ValueError(
+            "Histogram contains negative values or zero, cannot use "
+            "log scale. Set appropriate value ranges to clip values."
+        )
 
     # plot the 2D hist
     hist_config: dict[str, Any] = {
