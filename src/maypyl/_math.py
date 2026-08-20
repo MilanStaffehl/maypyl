@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Milan Staffehl - subject to the MIT license.
+# Copyright (c) 2025-2026 Milan Staffehl - subject to the MIT license.
 """Simple math functions and utilities."""
 
 from __future__ import annotations
