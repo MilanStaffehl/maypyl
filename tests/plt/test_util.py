@@ -70,3 +70,63 @@ def test_silence_matplotlib_decorator(caplog: LogCaptureFixture) -> None:
     assert len(caplog.records) == 1
     assert caplog.records[0].levelno == logging.DEBUG
     assert caplog.records[0].message == "I should show up."
+
+
+def test_frexp10_base() -> None:
+    """Test the function to decompose in base 10."""
+    number = 1.23e4
+    output = maypyl.plt.frexp10(number)
+    assert output == (1.23, 4)
+
+    number = 9.87e6
+    output = maypyl.plt.frexp10(number)
+    assert output == (9.87, 6)
+
+
+def test_frexp10_negative_number() -> None:
+    """Test decomposing a negative number into mantissa and exponent."""
+    number = -1.23e4
+    output = maypyl.plt.frexp10(number)
+    assert output == (-1.23, 4)
+
+    number = -9.87e6
+    output = maypyl.plt.frexp10(number)
+    assert output == (-9.87, 6)
+
+
+def test_frexp10_negative_exponent() -> None:
+    """Test the function for a negative exponent."""
+    number = 1.23e-4
+    output = maypyl.plt.frexp10(number)
+    assert output == (1.23, -4)
+
+    # here is an example for an inexact conversion:
+    number = 9.87e-6
+    output = maypyl.plt.frexp10(number)
+    assert output == (9.870000000000001, -6)
+
+
+def test_frexp10_zero_exponent() -> None:
+    """Test the function with a zero exponent."""
+    number = 1.23e00
+    output = maypyl.plt.frexp10(number)
+    assert output == (1.23, 0)
+
+
+def test_frexp10_zero() -> None:
+    """Test the function when the number is zero."""
+    number = 0.0
+    output = maypyl.plt.frexp10(number)
+    assert output == (0.0, 0)
+
+    number = 0e2
+    output = maypyl.plt.frexp10(number)
+    assert output == (0.0, 0)
+
+    number = 0e-3
+    output = maypyl.plt.frexp10(number)
+    assert output == (0.0, 0)
+
+    number = -0.0
+    output = maypyl.plt.frexp10(number)
+    assert output == (0.0, 0)

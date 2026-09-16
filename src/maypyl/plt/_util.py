@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import math
 from typing import Callable
 
 
@@ -36,3 +37,38 @@ def silence_matplotlib[T, **P](func: Callable[P, T]) -> Callable[P, T]:
         return result
 
     return wrapper
+
+
+def frexp10(number: float) -> tuple[float, int]:
+    """
+    Decompose a number into mantissa and exponent in base 10.
+
+    Given any floating-point number, this function decomposes the number
+    into mantissa and exponent in base 10. This is useful for labels in
+    plots that require pretty formatting of number values::
+
+        number = mantissa * 10^exponent
+
+    .. warning::
+
+        The conversion is not exact! It will introduce rounding and
+        floating-point errors. For example, passing ``9.87e-6`` will
+        result in a mantissa of ``9.870000000000001``.
+
+        This function is located in the *plotting* module for a reason:
+        It is meant primarily as a way to conveniently format labels of
+        large numbers. Do not use this function where numerical precision
+        is required!
+
+    :param number: Any floating-point number that cannot be easily
+        displayed as plain float.
+    :return: A tuple of a float and an integer: the mantissa (first, type
+        float) and exponent (second, type int) of the given number in
+        base 10.
+    """
+    if number == 0:
+        exponent = 0
+    else:
+        exponent = int(math.floor(math.log10(abs(number))))
+    mantissa = number / (10**exponent)
+    return mantissa, exponent
