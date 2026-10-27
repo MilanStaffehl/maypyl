@@ -35,7 +35,7 @@ def axis_aligned_cell_projection(  # noqa: C901
     ny_bins: int = 50,
     projection_axis: Literal["x", "y", "z"] = "z",
     projection_range: tuple[AnyFloat, AnyFloat] | None = None,
-    mode: Literal["sum", "mean"] = "sum",
+    mode: Literal["sum", "mean", "max", "min"] = "sum",
     method: Literal["area average", "ray"] = "area average",
 ) -> tuple[ImageArray, EdgesTuple]:
     """
@@ -115,9 +115,10 @@ def axis_aligned_cell_projection(  # noqa: C901
     be arrays of shape (N, ) when given, and must have the same cell
     order as ``cell_edges``.
 
-    The projection can be done in one of two ways: as an integration
-    along the line of sight defined by each pixel, or as a mean over
-    this column. This is determined by the choice of ``mode``:
+    The projection can be done in one of four ways: as an integration
+    along the line of sight defined by each pixel, as a mean over
+    this column, or as a simple max/min along the line of sight. This is
+    determined by the choice of ``mode``:
 
     - ``sum``: The value given is simply summed up along the line of
       sight, weighted by the depth of each cell, and optionally the
@@ -180,8 +181,25 @@ def axis_aligned_cell_projection(  # noqa: C901
 
       This mode is particularly useful to create density-weighted means
       of quantities such as temperature or mass-weighted velocity.
+    - ``max``: The function finds the (weighted) maximum along each line
+      of sight. When using the ``area average`` method, this means that
+      all cells that overlap with the current pixel are taken into account,
+      even if their overlap with the pixel is minimal. This can mean that
+      pixels with very small overlap can dominate the maximum of many
+      adjacent pixels. Mathematically, this translates to
 
-    In both modes, weights are optional. If no weights are desired, set
+      .. math::
+
+          Q_p(x, y) = \\max (q_j(x_c, y_c) w_j(x_c, y_c))
+
+      When weights are provided, the values of each cell are multiplied
+      by these weights, and the maximum of the product is found for each
+      pixel. NaNs are ignored, but infinite values are treated as valid
+      results.
+    - ``min``: The same as ``max``, except it finds the lowest non-NaN
+      value in each line of sight.
+
+    In all modes, weights are optional. If no weights are desired, set
     ``weights`` to None. In this case, all weights will be automatically
     set to unity.
 
@@ -250,13 +268,14 @@ def axis_aligned_cell_projection(  # noqa: C901
         axis will be discarded and not considered for the projection.
         Optional, defaults to ``None``, which means all cells will be
         used, irrespective of their position along the projection axis.
-    :param mode: The projection mode to use. This must either be ``"sum"``
-        or ``"mean"`. Mode ``sum`` means that all values along a pixel
-        line of sight are summed (weighted by the respective cell depth
-        and possibly weights). Mode ``mean`` takes the (weighted) mean
-        along this line of sight. See above for details. Defaults to
-        ``"sum"``.
-    :param method: What method to use to calculte projections. Can be
+    :param mode: The projection mode to use. This must either be ``"sum"``,
+        ``"mean"``, ``"max"``, or ``"min"``. Mode ``sum`` means that all
+        values along a pixel line of sight are summed (weighted by the
+        respective cell depth and possibly weights). Mode ``mean`` takes
+        the (weighted) mean along this line of sight. ``max`` and ``min``
+        Find the maximum or minimum weighted value along each line of
+        sight. See above for details. Defaults to ``"sum"``.
+    :param method: What method to use to calculate projections. Can be
         either ``area average`` for a pixel-area averaged value, or
         ``ray`` for a value integrated along a single ray from the
         center of each pixel. See above for details. Defaults to ``area
@@ -269,8 +288,8 @@ def axis_aligned_cell_projection(  # noqa: C901
         of the pixels along the image's horizontal and vertical axis,
         respectively.
     """
-    if mode not in ["sum", "mean"]:
-        raise ValueError("`mode` must be 'sum' or 'mean")
+    if mode not in ["sum", "mean", "max", "min"]:
+        raise ValueError("`mode` must be 'sum', 'mean', 'max', or 'min'")
     # verify cell edges and unpack their values
     if isinstance(cell_edges, np.ndarray):
         if not cell_edges.ndim == 2 and cell_edges.shape[0] == 6:
@@ -411,8 +430,14 @@ def axis_aligned_cell_projection(  # noqa: C901
         # normalize value by weights if average is requested
         if mode == "mean":
             pixel_value[i] = px_value / px_weights
-        else:
+        elif mode == "sum":
             pixel_value[i] = px_value
+        elif mode == "max":
+            pixel_value[i] = np.nanmax(current_values * current_weights)
+        elif mode == "min":
+            pixel_value[i] = np.nanmin(current_values * current_weights)
+        else:
+            raise ValueError(f"Unknown mode {mode}")
 
     # reshape the image into the proper shape. Shape must be (Y, X) to
     # preserve correct pixel order (pixels were stored in row-column order)

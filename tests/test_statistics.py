@@ -183,6 +183,94 @@ def test_axis_aligned_projection_single_mean_with_weight(
 
 
 @pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_single_max_no_weight(
+    method: Literal["area average", "ray"],
+    simple_cell_setup: CellSetupType,
+) -> None:
+    """Test function for no weights, mode max, simplest set-up."""
+    cell_edges, values = simple_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.0, 1.0, 0.0, 1.0),
+        nx_bins=1,
+        ny_bins=1,
+        mode="max",
+        method=method,
+    )
+    expected_img = np.array([[0.2]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_single_max_with_weight(
+    method: Literal["area average", "ray"],
+    simple_cell_setup: CellSetupType,
+) -> None:
+    """Test function with weights, mode max, simplest set-up."""
+    cell_edges, values = simple_cell_setup
+    weights = np.array([5.0, 1.0], dtype=np.float64)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.0, 1.0, 0.0, 1.0),
+        nx_bins=1,
+        ny_bins=1,
+        mode="max",
+        method=method,
+    )
+    expected_img = np.array([[0.5]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_single_min_no_weight(
+    method: Literal["area average", "ray"],
+    simple_cell_setup: CellSetupType,
+) -> None:
+    """Test function for no weights, mode max, simplest set-up."""
+    cell_edges, values = simple_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.0, 1.0, 0.0, 1.0),
+        nx_bins=1,
+        ny_bins=1,
+        mode="min",
+        method=method,
+    )
+    expected_img = np.array([[0.1]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_single_min_with_weight(
+    method: Literal["area average", "ray"],
+    simple_cell_setup: CellSetupType,
+) -> None:
+    """Test function with weights, mode min, simplest set-up."""
+    cell_edges, values = simple_cell_setup
+    weights = np.array([5.0, 1.0], dtype=np.float64)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.0, 1.0, 0.0, 1.0),
+        nx_bins=1,
+        ny_bins=1,
+        mode="min",
+        method=method,
+    )
+    expected_img = np.array([[0.2]])
+    expected_edges = np.array([0.0, 1.0]), np.array([0.0, 1.0])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
 def test_axis_aligned_projection_base_sum_no_weight(
     method: Literal["area average", "ray"],
     base_cell_setup: CellSetupType,
@@ -282,6 +370,105 @@ def test_axis_aligned_projection_base_mean_with_weight(
         expected_img = np.array([[15.2 / 8.2]])
     else:
         expected_img = np.array([[4.0 / 3.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_base_max_no_weight(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function for no weights, mode max, basic set-up."""
+    cell_edges, values = base_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        mode="max",
+        method=method,
+    )
+    # rays are counted as traversing only the top right cell column
+    if method == "area average":
+        expected_img = np.array([[3.0]])
+    else:
+        expected_img = np.array([[2.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_base_max_with_weight(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function with weights, mode max, basic set-up."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        mode="max",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[4.0]])
+    else:
+        expected_img = np.array([[2.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_base_min_no_weight(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function for no weights, mode min, basic set-up."""
+    cell_edges, values = base_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        mode="min",
+        method=method,
+    )
+    # rays are counted as traversing only the top right cell column
+    expected_img = np.array([[1.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_base_min_with_weight(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function with weights, mode min, basic set-up."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        mode="min",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[0.1]])
+    else:
+        expected_img = np.array([[2.0]])
     expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
@@ -388,6 +575,106 @@ def test_axis_aligned_projection_offset_mean_with_weights(
         expected_img = np.array([[1.936 / 0.956]])
     else:
         expected_img = np.array([[2.0]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_offset_max_no_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function with the pixel being offset, mode max, no weights."""
+    # off-center the pixel so that it mostly covers the lower left cell:
+    cell_edges, values = base_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.1, 0.6, 0.1, 0.6),
+        nx_bins=1,
+        ny_bins=1,
+        mode="max",
+        method=method,
+    )
+    # rays traverse only the bottom left cells
+    expected_img = np.array([[3.0]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_offset_max_with_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function with the pixel being offset, mode max, with weights."""
+    # off-center the pixel so that it mostly covers the lower left cell:
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.1, 0.6, 0.1, 0.6),
+        nx_bins=1,
+        ny_bins=1,
+        mode="max",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[4.0]])
+    else:
+        expected_img = np.array([[3.0]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_offset_min_no_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function with the pixel being offset, mode min, no weights."""
+    # off-center the pixel so that it mostly covers the lower left cell:
+    cell_edges, values = base_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.1, 0.6, 0.1, 0.6),
+        nx_bins=1,
+        ny_bins=1,
+        mode="min",
+        method=method,
+    )
+    # rays traverse only the bottom left cells
+    expected_img = np.array([[1.0]])
+    expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_offset_min_with_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test function with the pixel being offset, mode min, with weights."""
+    # off-center the pixel so that it mostly covers the lower left cell:
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.1, 0.6, 0.1, 0.6),
+        nx_bins=1,
+        ny_bins=1,
+        mode="min",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[0.1]])
+    else:
+        expected_img = np.array([[1.0]])
     expected_edges = np.array([0.1, 0.6]), np.array([0.1, 0.6])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
@@ -532,6 +819,131 @@ def test_axis_aligned_projection_multipixel_mean_with_weights(
 
 
 @pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_multipixel_max_no_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test the function for multiple pixels, mode max, no weights."""
+    cell_edges, values = base_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.1, 0.9, 0.1, 0.9),
+        nx_bins=3,
+        ny_bins=3,
+        mode="max",
+        method=method,
+    )
+    # for the ray, the ray runs through the lower cells in the middle
+    if method == "area average":
+        expected_img = np.array(
+            [[3.0, 3.0, 3.0], [3.0, 3.0, 3.0], [2.0, 2.0, 2.0]]
+        )
+    else:
+        expected_img = np.array(
+            [[3.0, 3.0, 3.0], [2.0, 2.0, 2.0], [2.0, 2.0, 2.0]]
+        )
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+    )
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_multipixel_max_with_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test the function for multiple pixels, mode max, with weights."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.1, 0.9, 0.1, 0.9),
+        nx_bins=3,
+        ny_bins=3,
+        mode="max",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array(
+            [[3.0, 3.0, 3.0], [4.0, 4.0, 3.0], [4.0, 4.0, 2.0]]
+        )
+    else:
+        expected_img = np.array(
+            [[3.0, 3.0, 3.0], [4.0, 2.0, 2.0], [4.0, 2.0, 2.0]]
+        )
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+    )
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_multipixel_min_no_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test the function for multiple pixels, mode min, no weights."""
+    cell_edges, values = base_cell_setup
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.1, 0.9, 0.1, 0.9),
+        nx_bins=3,
+        ny_bins=3,
+        mode="min",
+        method=method,
+    )
+    # for the ray, the ray runs through the lower cells in the middle
+    expected_img = np.array(
+        [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
+    )
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+    )
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_multipixel_min_with_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test the function for multiple pixels, mode min, with weights."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.1, 0.9, 0.1, 0.9),
+        nx_bins=3,
+        ny_bins=3,
+        mode="min",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array(
+            [[1.0, 0.1, 0.1], [0.1, 0.1, 0.1], [0.1, 0.1, 2.0]]
+        )
+    else:
+        expected_img = np.array(
+            [[1.0, 0.1, 0.1], [0.1, 2.0, 2.0], [0.1, 2.0, 2.0]]
+        )
+    expected_edges = (
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+        np.array([0.1, 0.36666667, 0.63333333, 0.9]),
+    )
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
 def test_axis_aligned_projection_limited_depth_sum_no_weights(
     method: Literal["area average", "ray"],
     base_cell_setup: CellSetupType,
@@ -633,6 +1045,114 @@ def test_axis_aligned_projection_limited_depth_mean_with_weight(
     )
     if method == "area average":
         expected_img = np.array([[0.65 / 0.275]])
+    else:
+        expected_img = np.array([[2.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_limited_depth_max_no_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode max, no weights."""
+    cell_edges, values = base_cell_setup
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="max",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[3.0]])
+    else:
+        expected_img = np.array([[1.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_limited_depth_max_with_weight(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode max, basic set-up."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="max",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[3.0]])
+    else:
+        expected_img = np.array([[2.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_limited_depth_min_no_weights(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode min, no weights."""
+    cell_edges, values = base_cell_setup
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="min",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[1.0]])
+    else:
+        expected_img = np.array([[2.0]])
+    expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
+    assert_cell_setup(image, im_edges, expected_img, expected_edges)
+
+
+@pytest.mark.parametrize("method", ["area average", "ray"])
+def test_axis_aligned_projection_limited_depth_min_with_weight(
+    method: Literal["area average", "ray"],
+    base_cell_setup: CellSetupType,
+) -> None:
+    """Test limiting the depth of the projection, mode min, basic set-up."""
+    cell_edges, values = base_cell_setup
+    weights = np.array([0.1, 1.0, 1.0, 0.1, 2.0, 2.0, 1.0, 1.0])
+    projection_depth = (0.01, 0.49)
+    image, im_edges = maypyl.axis_aligned_cell_projection(
+        cell_edges,
+        values,
+        weights=weights,
+        extent=(0.25, 0.75, 0.25, 0.75),
+        nx_bins=1,
+        ny_bins=1,
+        projection_range=projection_depth,
+        mode="min",
+        method=method,
+    )
+    if method == "area average":
+        expected_img = np.array([[0.1]])
     else:
         expected_img = np.array([[2.0]])
     expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
