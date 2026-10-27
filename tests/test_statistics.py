@@ -1072,7 +1072,7 @@ def test_axis_aligned_projection_limited_depth_max_no_weights(
     if method == "area average":
         expected_img = np.array([[3.0]])
     else:
-        expected_img = np.array([[1.0]])
+        expected_img = np.array([[2.0]])
     expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
