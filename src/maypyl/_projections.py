@@ -362,7 +362,7 @@ def axis_aligned_cell_projection(
     if weights is not None and weights.shape != (n_cells,):
         raise ValueError(
             f"`weights` must have shape ({n_cells},) to match cells, "
-            f"got {values.shape}"
+            f"got {weights.shape}"
         )
 
     # Depending on projection axis, we define our (u, v) image plane and
