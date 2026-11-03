@@ -1,5 +1,5 @@
 # Copyright (c) 2025-2026 Milan Staffehl - subject to the MIT license.
-"""Tests for the :py:mod:`~maypyl._statistics` module."""
+"""Tests for the :py:mod:`~maypyl._projections` module."""
 
 from __future__ import annotations
 
@@ -962,9 +962,9 @@ def test_axis_aligned_projection_limited_depth_sum_no_weights(
         method=method,
     )
     if method == "area average":
-        expected_img = np.array([[0.875]])
+        expected_img = np.array([[0.84]])
     else:
-        expected_img = np.array([[1.0]])
+        expected_img = np.array([[0.96]])
     expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
@@ -990,9 +990,9 @@ def test_axis_aligned_projection_limited_depth_sum_with_weight(
         method=method,
     )
     if method == "area average":
-        expected_img = np.array([[0.65]])
+        expected_img = np.array([[0.624]])
     else:
-        expected_img = np.array([[1.0]])
+        expected_img = np.array([[0.96]])
     expected_edges = np.array([0.25, 0.75]), np.array([0.25, 0.75])
     assert_cell_setup(image, im_edges, expected_img, expected_edges)
 
